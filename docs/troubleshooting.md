@@ -1,19 +1,18 @@
----
-
 ### **1. Why might a Valkey cluster in Kubernetes experience split-brain, and how do you prevent it?**
 
 **Possible causes of split-brain:**
 
-* Network partition between Valkey nodes, leading multiple nodes to believe they are the primary.
-* Node restarts or pod evictions causing quorum loss in cluster mode.
-* Misconfigured cluster topology (e.g., insufficient number of master nodes for consensus).
-* Heavy load or slow communication causing heartbeat timeouts.
+- Network partition between Valkey nodes, leading multiple nodes to believe they are the primary.
+- Node restarts or pod evictions causing quorum loss in cluster mode.
+- Misconfigured cluster topology (e.g., insufficient number of master nodes for consensus).
+- Heavy load or slow communication causing heartbeat timeouts.
 
 **Prevention strategies:**
-* Use **PodAntiAffinity rules** to ensure nodes are spread across different physical nodes.
-* Configure **proper health checks** and `maxmemory-policy` to avoid unintentional failovers under memory pressure.
-* Enable **persistent storage** with StatefulSets to preserve data across restarts.
-* Monitor cluster state and set alerts for node partition or failover events.
+
+- Use **PodAntiAffinity rules** to ensure nodes are spread across different physical nodes.
+- Configure **proper health checks** and `maxmemory-policy` to avoid unintentional failovers under memory pressure.
+- Enable **persistent storage** with StatefulSets to preserve data across restarts.
+- Monitor cluster state and set alerts for node partition or failover events.
 
 ---
 
