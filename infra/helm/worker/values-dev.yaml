@@ -1,0 +1,26 @@
+env: dev # Change to test/prod as needed
+namespace: quegrowth-dev # Change to test/prod as needed
+imageRegistry: quegrowthDevAcr.azurecr.io
+serviceAccountName: workload-identity-sa
+imageTag: latest # default tag; will be overridden in GitHub Actions
+clientID: azurekeyvaultsecretsprovider-client-id # will be overridden in GitHub Actions
+tenantId: tenant-ID-of-the-key-vault # will be overridden in GitHub Actions
+
+worker:
+  image: worker
+  labels:
+    app: quegrowth-worker
+  replicaCount: 1
+  autoscaling:
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 150
+    targetMemoryUtilizationPercentage: 150
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "320Mi"
+    limits:
+      cpu: "150m"
+      memory: "512Mi"
+  keyvaultName: quegrowth-worker-dev-kv

@@ -1,0 +1,27 @@
+env: prod # Change to test/prod as needed
+namespace: cuegrowth-prod # Change to test/prod as needed
+imageRegistry: cuegrowthProdAcr.azurecr.io
+serviceAccountName: workload-identity-sa
+imageTag: latest # default tag; will be overridden in GitHub Actions
+clientID: azurekeyvaultsecretsprovider-client-id # will be overridden in GitHub Actions
+tenantId: tenant-ID-of-the-key-vault # will be overridden in GitHub Actions
+
+valkey:
+  image: valkey
+  labels:
+    app: cuegrowth-valkey
+  port: 6379
+  replicaCount: 1
+  autoscaling:
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 150
+    targetMemoryUtilizationPercentage: 150
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "256Mi"
+    limits:
+      cpu: "400m"
+      memory: "512Mi"
+  keyvaultName: cuegrowth-valkey-prod-kv

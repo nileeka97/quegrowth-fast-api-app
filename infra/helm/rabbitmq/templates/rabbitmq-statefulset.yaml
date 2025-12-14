@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}-sfs
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "quegrowth.labels" . | nindent 4 }}
+    {{- toYaml .Values.rabbitmq.labels | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- toYaml .Values.rabbitmq.labels | nindent 6 }}
+      environment: {{ .Values.env }}
+  serviceName: "{{ .Release.Name }}-svc"
+  replicas: {{ .Values.rabbitmq.replicaCount }}
+  template:
+    metadata:
+      labels:
+        {{- toYaml .Values.rabbitmq.labels | nindent 8 }}
+        environment: {{ .Values.env }}
+    spec:
+      serviceAccountName: {{ .Values.serviceAccountName }}
+      containers:
+        - name: rabbitmq
+          image: {{ .Values.imageRegistry }}/{{ .Values.rabbitmq.image }}:{{ .Values.imageTag }} #rabbitmq:4-management
+          imagePullPolicy: Always
+          ports:
+          - containerPort: {{ .Values.rabbitmq.ports.amqp }}
+          - containerPort: {{ .Values.rabbitmq.ports.management }}
+          livenessProbe:
+            exec:
+              command:
+                - rabbitmq-diagnostics
+                - -q
+                - ping
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 10
+          envFrom:
+          - secretRef:
+              name: {{ .Release.Name }}-secret
+          volumeMounts:
+            - name: quegrowth-rabbitmq-{{ .Values.env }}
+              mountPath: /var/lib/rabbitmq
+            - name: secrets-store
+              mountPath: "/mnt/secrets-store"
+              readOnly: true
+          resources:
+            {{- toYaml .Values.rabbitmq.resources | nindent 12 }}
+      volumes:
+      - name: secrets-store
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: {{ .Release.Name }}-spc
+  volumeClaimTemplates:
+    - metadata:
+        name: quegrowth-rabbitmq-{{ .Values.env }}
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: managed-csi
+        resources:
+          requests:
+            storage: 1Gi

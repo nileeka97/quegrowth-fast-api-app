@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: quegrowth-{{ .Values.env }}-ingress
+  namespace: {{ .Values.namespace }}
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/proxy-body-size: 5m
+  labels:
+    {{- toYaml .Values.ingress.labels | nindent 4 }}
+    environment: {{ .Values.env }}
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: {{ .Values.ingress.backend }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-api-svc
+                port:
+                  number: 8000

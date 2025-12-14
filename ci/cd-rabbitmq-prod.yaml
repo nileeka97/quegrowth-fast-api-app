@@ -1,0 +1,91 @@
+name: CD PROD - RabbitMQ
+
+on:
+  push:
+    branches:
+      - prod
+
+    paths:
+      - ".github/workflows/cd-rabbitmq-prod-aks.yaml"
+      - "services/rabbitmq/**"
+      - "infra/helm/rabbitmq/**"
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ACR_NAME: quegrowthProdAcr
+  RABMQ_IMAGE_NAME: rabbitmq
+  RABMQ_IMAGE_DOCKERFILE: services/rabbitmq/Dockerfile
+  # AKS env vars
+  AKS_RESOURCE_GROUP: quegrowth-prod-rg
+  AKS_CLUSTER_NAME: quegrowth-prod-cluster
+  RELEASE_NAME: quegrowth-rabbitmq-prod
+  HELM_CHART_PATH: infra/helm/rabbitmq/
+  HELM_VALUES_FILE: infra/helm/rabbitmq/values-prod.yaml
+  NAMESPACE: quegrowth-prod
+
+jobs:
+  build-docker-images:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Container Registry Login
+        uses: azure/docker-login@v2
+        with:
+          login-server: ${{ env.ACR_NAME }}.azurecr.io
+          username: ${{ secrets.ACR_USERNAME_PROD }}
+          password: ${{ secrets.ACR_PASSWORD_PROD }}
+
+      - name: Build and push rabbitmq image
+        run: |
+          docker build -f $RABMQ_IMAGE_DOCKERFILE -t $ACR_NAME.azurecr.io/$RABMQ_IMAGE_NAME:${{ github.sha }} .
+          docker push $ACR_NAME.azurecr.io/$RABMQ_IMAGE_NAME:${{ github.sha }}
+
+  deploy-to-aks:
+    runs-on: ubuntu-latest
+    needs: build-docker-images
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Azure CLI
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_APP_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set up kubectl
+        uses: azure/aks-set-context@v4
+        with:
+          resource-group: ${{ env.AKS_RESOURCE_GROUP }}
+          cluster-name: ${{ env.AKS_CLUSTER_NAME }}
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: v3.14.4
+
+      - name: Deploy Helm chart to AKS
+        run: |
+          helm upgrade --install ${{ env.RELEASE_NAME }} ${{ env.HELM_CHART_PATH }} \
+            --namespace ${{ env.NAMESPACE }} \
+            --values ${{ env.HELM_VALUES_FILE }} \
+            --set imageTag=${{ github.sha }} \
+            --set clientID=${{ secrets.AZURE_KV_CLIENT_ID_PROD }} \
+            --set tenantId=${{ secrets.AZURE_TENANT_ID }}
+
+      - name: Wait for all deployments
+        run: |
+          for statefulset in $(kubectl get statefulsets -n ${{ env.NAMESPACE }} -o name); do
+            kubectl rollout status $statefulset -n ${{ env.NAMESPACE }} --timeout=5m
+          done
+
+      - name: Logout from Azure
+        run: az logout

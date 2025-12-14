@@ -1,0 +1,7 @@
+env: dev # Change to test/prod as needed
+namespace: quegrowth-dev # Change to test/prod as needed
+
+ingress:
+  backend: backend-dev.quegrowth.me
+  labels:
+    app: quegrowth-ingress

@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-api-deploy
+  namespace: {{ .Values.api.namespace }}
+  labels:
+    {{- include "quegrowth.labels" . | nindent 4 }}
+    {{- toYaml .Values.api.labels | nindent 4 }}
+spec:
+  replicas: {{ .Values.api.replicaCount }}
+  selector:
+    matchLabels:
+      {{- toYaml .Values.api.labels | nindent 6 }}
+      environment: {{ .Values.api.env }}
+  template:
+    metadata:
+      labels:
+        {{- toYaml .Values.api.labels | nindent 8 }}
+        environment: {{ .Values.api.env }}
+    spec:
+      serviceAccountName: {{ .Values.api.serviceAccountName }}
+      containers:
+        - name: api
+          image: {{ .Values.api.imageRegistry }}/{{ .Values.api.image }}:{{ .Values.api.imageTag }}
+          imagePullPolicy: Always
+          ports:
+          - containerPort: {{ .Values.api.port }}
+          envFrom:
+          - secretRef:
+              name: {{ .Release.Name }}-api-secret
+          volumeMounts:
+          - name: secrets-store
+            mountPath: "/mnt/secrets-store"
+            readOnly: true
+          resources:
+            {{- toYaml .Values.api.resources | nindent 12 }}
+      volumes:
+      - name: secrets-store
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: {{ .Release.Name }}-api-spc

@@ -1,0 +1,51 @@
+name: Trivy Scan
+
+on:
+  push:
+    branches:
+      - prod
+
+env:
+  WORKER_IMAGE_DOCKERFILE: services/worker/Dockerfile
+  API_IMAGE_DOCKERFILE: services/api/Dockerfile
+
+jobs:
+  worker:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build an image from Dockerfile
+        run: docker build -f $WORKER_IMAGE_DOCKERFILE -t worker:${{ github.sha }} .
+
+      - name: Run Trivy docker scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: "worker:${{ github.sha }}"
+          format: "table"
+          exit-code: "1"
+          severity: "CRITICAL,HIGH"
+          cache: "false"
+          ignore-unfixed: true
+
+  api:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build an image from Dockerfile
+        run: docker build -f $API_IMAGE_DOCKERFILE -t api:${{ github.sha }} .
+
+      - name: Run Trivy docker scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: "api:${{ github.sha }}"
+          format: "table"
+          exit-code: "1"
+          severity: "CRITICAL,HIGH"
+          cache: "false"
+          ignore-unfixed: true
