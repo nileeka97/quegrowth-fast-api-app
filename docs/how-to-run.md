@@ -65,12 +65,12 @@ helm upgrade quegrowth-worker-dev . \
 
 ---
 
-### Redis
+### Valkey
 
 **Install:**
 
 ```bash
-helm install quegrowth-redis-dev . \
+helm install quegrowth-valkey-dev . \
   --namespace quegrowth-dev \
   --values values-dev.yaml
 ```
@@ -78,7 +78,7 @@ helm install quegrowth-redis-dev . \
 **Upgrade:**
 
 ```bash
-helm upgrade quegrowth-redis-dev . \
+helm upgrade quegrowth-valkey-dev . \
   --namespace quegrowth-dev \
   --values values-dev.yaml
 ```
